@@ -808,6 +808,51 @@ def _bwd_kernel(
             BLOCK_N=BLOCK_N,
         )
 
+def _select_optimal_blocks(seqlen_q, seqlen_k):
+    if seqlen_q <= 4:
+        if seqlen_k < 512:
+            return 32, 32
+        elif seqlen_k < 2048:
+            return 32, 64
+        elif seqlen_k < 8192:
+            return 64, 128
+        else:
+            return 64, 128
+    
+    elif seqlen_q <= 32:
+        if seqlen_k < 1024:
+            return 32, 64
+        else:
+            return 64, 128
+    
+    elif seqlen_q <= 128:
+        if seqlen_k < 2048:
+            return 64, 64
+        else:
+            return 64, 128
+    
+    else:
+        return 128, 128
+
+
+def _select_num_warps(BLOCK_M, BLOCK_N, d):
+    total_block_size = BLOCK_M * BLOCK_N
+
+    if d <= 64:
+        if total_block_size <= 2048:
+            return 2
+        elif total_block_size <= 4096:
+            return 4
+        else:
+            return 4
+    else:
+        if total_block_size <= 2048:
+            return 4
+        elif total_block_size <= 4096:
+            return 4
+        else:
+            return 8
+
 
 def _flash_attn_forward(q, k, v, bias=None, causal=False, softmax_scale=None):
     # shape constraints
@@ -840,14 +885,21 @@ def _flash_attn_forward(q, k, v, bias=None, causal=False, softmax_scale=None):
         bias = bias.expand(batch, nheads, seqlen_q, seqlen_k)
     bias_strides = (bias.stride(0), bias.stride(1), bias.stride(2)) if has_bias else (0, 0, 0)
 
-    seqlen_q_rounded = math.ceil(seqlen_q / 128) * 128
+    # ======================================================
+    BLOCK_M, BLOCK_N = _select_optimal_blocks(seqlen_q, seqlen_k)
+    num_warps = _select_num_warps(BLOCK_M, BLOCK_N, d)
+
+    seqlen_q_rounded = math.ceil(seqlen_q / BLOCK_M) * BLOCK_M
+    # ======================================================
+
+    # seqlen_q_rounded = math.ceil(seqlen_q / 128) * 128
     lse = torch.empty((batch, nheads, seqlen_q_rounded), device=q.device, dtype=torch.float32)
     tmp = torch.empty((batch, nheads, seqlen_q_rounded), device=q.device, dtype=torch.float32)
     o = torch.empty_like(q)
 
     BLOCK_HEADDIM = max(triton.next_power_of_2(d), 16)
-    BLOCK = 128
-    num_warps = 4 if d <= 64 else 8
+    # BLOCK = 128
+    # num_warps = 4 if d <= 64 else 8
     grid = lambda META: (triton.cdiv(seqlen_q, META["BLOCK_M"]), batch * nheads)
     _fwd_kernel[grid](
         q,
@@ -883,8 +935,8 @@ def _flash_attn_forward(q, k, v, bias=None, causal=False, softmax_scale=None):
         bias_type,
         causal,
         BLOCK_HEADDIM,
-        BLOCK_M=BLOCK,
-        BLOCK_N=BLOCK,
+        BLOCK_M=BLOCK_M,
+        BLOCK_N=BLOCK_N,
         num_warps=num_warps,
         num_stages=1,
     )
