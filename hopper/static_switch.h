@@ -164,9 +164,6 @@
     } else if (ARCH < 90) {                                                                      \
       constexpr static int ARCH_NAME = 80;                                                       \
       return __VA_ARGS__();                                                                      \
-    } else {                                                                                     \
-      constexpr static int ARCH_NAME = 90;                                                       \
-      return __VA_ARGS__();                                                                      \
     }                                                                                            \
   }()
 #endif

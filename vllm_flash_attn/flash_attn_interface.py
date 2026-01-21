@@ -240,38 +240,35 @@ def flash_attn_varlen_func(
     dummy_cu_seqlens_k = torch.empty_like(cu_seqlens_q)
     
     if fa_version == 2:
-        if scheduler_metadata is not None and q_descale is not None \
-            and k_descale is not None and v_descale is not None:
-                raise NotImplementedError(
-                    "FA2 does not support scheduler_metadata, q_descale, "
-                    "k_descale, v_descale"
-                )
-        if s_aux is not None:
-            raise NotImplementedError("FA2 does not support s_aux")
-        if num_splits > 1:
-            raise NotImplementedError("FA2 does not support num_splits > 1")
-        out, softmax_lse = torch.ops._vllm_fa2_C.varlen_fwd(
+        assert alibi_slopes is None, "Alibi is not supported"
+        out, softmax_lse, _, _ = torch.ops._vllm_fa3_C.fwd(
             q, k, v,
+            None, None,       # k_new, v_new
+            q_v,
             out,
             cu_seqlens_q,
-            # cu_seqlens_k not used since we use seqused_k, but flash_api.cpp 
-            # still wants it so we pass all zeros
-            dummy_cu_seqlens_k if cu_seqlens_k is None else cu_seqlens_k,
-            seqused_k,
-            None,
+            cu_seqlens_k,     # cu_seqlens_k
+            None,             # cu_seqlens_k_new
+            None, seqused_k,  # seqused_q, seqused_k
+            max_seqlen_q, max_seqlen_k,
             block_table,
-            alibi_slopes,
-            max_seqlen_q,
-            max_seqlen_k,
-            dropout_p,
+            None,             # kv_batch_idx
+            None,             # leftpad_k
+            None, None, None, # rotary_cos, rotary_sin, seqlens_rotary
+            q_descale, k_descale, v_descale,
             softmax_scale,
-            False,
             causal,
-            real_window_size[0],
-            real_window_size[1],
+            real_window_size[0], real_window_size[1],
             softcap,
-            return_softmax_lse and dropout_p > 0,
-            None,
+            True,             # rotary_interleaved
+            scheduler_metadata,
+            num_splits,
+            None,             # pack_gqa
+            0,                # sm_margin
+            s_aux,            # s_aux
+            cp_world_size,
+            cp_rank,
+            cp_tot_seqused_k,
         )
     elif fa_version == 3:
         assert alibi_slopes is None, "Alibi is not supported in FA3"
