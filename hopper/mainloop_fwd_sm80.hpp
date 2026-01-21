@@ -62,7 +62,7 @@ struct CollectiveMainloopFwdSm80 {
         ArchTag::kMinComputeCapability >= 80,
         std::conditional_t<
             std::is_same_v<Element, cutlass::half_t>,
-            MMA_Atom<SM80_16x8x16_F32F16F16F32_TN>,
+            MMA_Atom<SM80_16x8x16_F16F16F16F16_TN>,
             MMA_Atom<SM80_16x8x16_F32BF16BF16F32_TN>
         >,
         MMA_Atom<SM75_16x8x8_F32F16F16F32_TN>

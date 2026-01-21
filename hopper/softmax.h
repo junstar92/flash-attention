@@ -182,7 +182,7 @@ struct Softmax {
         #pragma unroll
         for (int mi = 0; mi < size<0>(acc_o_rowcol); ++mi) {
             #pragma unroll
-            for (int ni = 0; ni < size<1>(acc_o_rowcol); ++ni) { acc_o_rowcol(mi, ni) *= scores_scale(mi); }
+            for (int ni = 0; ni < size<1>(acc_o_rowcol); ++ni) { acc_o_rowcol(mi, ni) *= typename Tensor1::value_type(scores_scale(mi)); }
         }
     };
 
