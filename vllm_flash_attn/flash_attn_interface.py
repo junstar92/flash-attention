@@ -48,10 +48,10 @@ def _is_fa2_supported(device = None) -> Tuple[bool, Optional[str]]:
 def _is_fa3_supported(device = None) -> Tuple[bool, Optional[str]]:
     if not FA3_AVAILABLE:
         return False, f"FA3 is unavaible due to: {FA3_UNAVAILABLE_REASON}"
-    if torch.cuda.get_device_capability(device)[0] < 9 \
-        or torch.cuda.get_device_capability(device)[0] >= 10:
-        return False, \
-            "FA3 is only supported on devices with compute capability 9.0"
+    # if torch.cuda.get_device_capability(device)[0] < 9 \
+    #     or torch.cuda.get_device_capability(device)[0] >= 10:
+    #     return False, \
+    #         "FA3 is only supported on devices with compute capability 9.0"
     return True, None
 
 def _is_fa4_supported(device = None) -> Tuple[bool, Optional[str]]:
@@ -240,35 +240,38 @@ def flash_attn_varlen_func(
     dummy_cu_seqlens_k = torch.empty_like(cu_seqlens_q)
     
     if fa_version == 2:
-        assert alibi_slopes is None, "Alibi is not supported"
-        out, softmax_lse, _, _ = torch.ops._vllm_fa3_C.fwd(
+        if scheduler_metadata is not None and q_descale is not None \
+            and k_descale is not None and v_descale is not None:
+                raise NotImplementedError(
+                    "FA2 does not support scheduler_metadata, q_descale, "
+                    "k_descale, v_descale"
+                )
+        if s_aux is not None:
+            raise NotImplementedError("FA2 does not support s_aux")
+        if num_splits > 1:
+            raise NotImplementedError("FA2 does not support num_splits > 1")
+        out, softmax_lse = torch.ops._vllm_fa2_C.varlen_fwd(
             q, k, v,
-            None, None,       # k_new, v_new
-            q_v,
             out,
             cu_seqlens_q,
-            cu_seqlens_k,     # cu_seqlens_k
-            None,             # cu_seqlens_k_new
-            None, seqused_k,  # seqused_q, seqused_k
-            max_seqlen_q, max_seqlen_k,
+            # cu_seqlens_k not used since we use seqused_k, but flash_api.cpp 
+            # still wants it so we pass all zeros
+            dummy_cu_seqlens_k if cu_seqlens_k is None else cu_seqlens_k,
+            seqused_k,
+            None,
             block_table,
-            None,             # kv_batch_idx
-            None,             # leftpad_k
-            None, None, None, # rotary_cos, rotary_sin, seqlens_rotary
-            q_descale, k_descale, v_descale,
+            alibi_slopes,
+            max_seqlen_q,
+            max_seqlen_k,
+            dropout_p,
             softmax_scale,
+            False,
             causal,
-            real_window_size[0], real_window_size[1],
+            real_window_size[0],
+            real_window_size[1],
             softcap,
-            True,             # rotary_interleaved
-            scheduler_metadata,
-            num_splits,
-            None,             # pack_gqa
-            0,                # sm_margin
-            s_aux,            # s_aux
-            cp_world_size,
-            cp_rank,
-            cp_tot_seqused_k,
+            return_softmax_lse and dropout_p > 0,
+            None,
         )
     elif fa_version == 3:
         assert alibi_slopes is None, "Alibi is not supported in FA3"
