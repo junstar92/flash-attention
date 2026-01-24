@@ -10,6 +10,29 @@ set(FA3_ENABLED ON)
 # CUDA by default, can be overridden by using -DVLLM_TARGET_DEVICE=... (used by setup.py)
 set(VLLM_TARGET_DEVICE "cuda" CACHE STRING "Target device backend for vLLM")
 
+set(_sm_src "
+#include <cstdio>
+#include <cuda_runtime.h>
+
+int main() {
+  int dev = 0;
+  cudaDeviceProp p;
+  if (cudaGetDevice(&dev) != cudaSuccess) return 2;
+  if (cudaGetDeviceProperties(&p, dev) != cudaSuccess) return 3;
+  // print as integer like 120, 90, 89, 86 ...
+  std::printf(\"%d\", p.major * 10 + p.minor);
+  return 0;
+}
+")
+
+file(WRITE ${CMAKE_BINARY_DIR}/detect_sm.cu "${_sm_src}")
+
+try_run(RUN_RES COMPILE_RES
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_BINARY_DIR}/detect_sm.cu
+    RUN_OUTPUT_VARIABLE DETECTED_SM
+)
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Target device: ${VLLM_TARGET_DEVICE}")
 
@@ -275,6 +298,11 @@ if (FA3_ENABLED AND ${CMAKE_CUDA_COMPILER_VERSION} GREATER_EQUAL 12.0)
         # CUTE_SM90_EXTENDED_MMA_SHAPES_ENABLED
         # CUTLASS_ENABLE_GDC_FOR_SM90
     )
+    if (DETECTED_SM STREQUAL "120")
+        target_compile_definitions(_vllm_fa3_C PRIVATE
+            FLASHATTENTION_SM120
+        )
+    endif()
 elseif(${CMAKE_CUDA_COMPILER_VERSION} VERSION_LESS 12.0)
     message(STATUS "FA3 is disabled because CUDA version is not 12.0 or later.")
 endif ()

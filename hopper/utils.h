@@ -47,7 +47,7 @@ template <typename Kernel>
 struct enable_sm80_to_sm89 : Kernel {
     template <typename... Args>
     CUTLASS_DEVICE void operator()(Args&&... args) {
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800) && (__CUDA_ARCH__ <= 890)
+#if defined(__CUDA_ARCH__) && (((__CUDA_ARCH__ >= 800) && (__CUDA_ARCH__ <= 890)) || (__CUDA_ARCH__ >= 100))
         Kernel::operator()(std::forward<Args>(args)...);
 #endif
     }

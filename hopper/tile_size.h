@@ -103,6 +103,11 @@ constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x_decode(
         bool sm86_or_89, int headdim, int headdim_v, bool is_causal, bool is_local, int element_size=2,
         bool paged_kv=false, bool varlen_and_split=false,
         bool softcap=false, bool append_kv=false) {
+#if defined(FLASHATTENTION_SM120)
+    constexpr int n_stages = 1;
+#else
+    constexpr int n_stages = 2;
+#endif
     if (element_size == 2) {
         if (headdim <= 64) {
             return {64, varlen_and_split ? 80 : (is_local ? 96 : 112), 2, 3, false};
@@ -110,7 +115,7 @@ constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x_decode(
             return {64, varlen_and_split || is_local ? 48 : 64, 2, 3, false};
         } else if (headdim <= 128) {
             bool const use_8_warps = sm86_or_89 | varlen_and_split;
-            return {64, use_8_warps ? (varlen_and_split ? (is_local ? 96 : 112) : (is_local ? 96 : 128)) : (is_local ? 48 : 64), use_8_warps ? 4 : 2, 2, use_8_warps};
+            return {64, use_8_warps ? (varlen_and_split ? (is_local ? 96 : 112) : (is_local ? 96 : 128)) : (is_local ? 48 : 64), use_8_warps ? 4 : 2, n_stages, use_8_warps};
         } else if (headdim <= 192) {
             bool const kBlockN_64 = append_kv || is_local || varlen_and_split || paged_kv;
             return {64, kBlockN_64 ? 64 : 96, 4, sm86_or_89 ? 1 : 2, !kBlockN_64};
