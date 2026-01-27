@@ -85,7 +85,7 @@ constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x(
             return {128, varlen_and_split || is_local ? 48 : 64, 4, 1, false};
         } else if (headdim <= 128) {
             bool const use_8_warps = sm86_or_89 | varlen_and_split;
-            return {128, use_8_warps ? (varlen_and_split ? (is_local ? 96 : 112) : (is_local ? 96 : 128)) : (is_local ? 48 : 64), use_8_warps ? 8 : 4, 1, use_8_warps};
+            return {128, use_8_warps ? (varlen_and_split ? (is_local ? 96 : 112) : (is_local ? 96 : 128)) : (is_local ? 48 : 64), use_8_warps ? 8 : 4, 2, use_8_warps};
         } else if (headdim <= 192) {
             bool const kBlockN_64 = append_kv || is_local || varlen_and_split || paged_kv;
             return {128, kBlockN_64 ? 64 : 96, 8, sm86_or_89 ? 1 : 2, !kBlockN_64};
@@ -115,7 +115,7 @@ constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x_decode(
             return {64, varlen_and_split || is_local ? 48 : 64, 2, 3, false};
         } else if (headdim <= 128) {
             bool const use_8_warps = sm86_or_89 | varlen_and_split;
-            return {64, use_8_warps ? (varlen_and_split ? (is_local ? 96 : 112) : (is_local ? 96 : 128)) : (is_local ? 48 : 64), use_8_warps ? 4 : 2, n_stages, use_8_warps};
+            return {64, use_8_warps ? (varlen_and_split ? (is_local ? 96 : 64) : (is_local ? 96 : 128)) : (is_local ? 48 : 128), 4, n_stages, use_8_warps};
         } else if (headdim <= 192) {
             bool const kBlockN_64 = append_kv || is_local || varlen_and_split || paged_kv;
             return {64, kBlockN_64 ? 64 : 96, 4, sm86_or_89 ? 1 : 2, !kBlockN_64};
