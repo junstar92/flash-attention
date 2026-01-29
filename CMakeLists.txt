@@ -32,9 +32,11 @@ try_run(RUN_RES COMPILE_RES
     ${CMAKE_BINARY_DIR}/detect_sm.cu
     RUN_OUTPUT_VARIABLE DETECTED_SM
 )
+string(REGEX MATCH "[0-9]+" DETECTED_SM_NUM "${DETECTED_SM}")
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Target device: ${VLLM_TARGET_DEVICE}")
+message(STATUS "Detected SM: ${DETECTED_SM_NUM}")
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/utils.cmake)
 
@@ -201,52 +203,89 @@ endif ()
 
 # FA3 requires CUDA 12.0 or later
 if (FA3_ENABLED AND ${CMAKE_CUDA_COMPILER_VERSION} GREATER_EQUAL 12.0)
-    # BF16 source files
-    file(GLOB FA3_BF16_GEN_SRCS
-        "hopper/instantiations/flash_fwd_hdim64_bf16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim96_bf16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim128_bf16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim192_bf16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim256_bf16*_sm80.cu")
-    # Add these for hdim diff cases
-    file(GLOB FA3_BF16_GEN_SRCS_
-        "hopper/instantiations/flash_fwd_hdim64_256_bf16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim64_512_bf16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim192_128_bf16*_sm80.cu")
-    list(APPEND FA3_BF16_GEN_SRCS ${FA3_BF16_GEN_SRCS_})
-    
-    # FP16 source files
-    file(GLOB FA3_FP16_GEN_SRCS
-        "hopper/instantiations/flash_fwd_hdim64_fp16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim96_fp16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim128_fp16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim192_fp16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim256_fp16*_sm80.cu")
-    # Add these for hdim diff cases
-    file(GLOB FA3_FP16_GEN_SRCS_
-        "hopper/instantiations/flash_fwd_hdim64_256_fp16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim64_512_fp16*_sm80.cu"
-        "hopper/instantiations/flash_fwd_hdim192_128_fp16*_sm80.cu")
-    list(APPEND FA3_FP16_GEN_SRCS ${FA3_FP16_GEN_SRCS_})
+    if (DETECTED_SM_NUM GREATER_EQUAL 90 AND DETECTED_SM_NUM LESS 100)
+        # BF16 source files
+        file(GLOB FA3_BF16_GEN_SRCS
+            "hopper/instantiations/flash_fwd_hdim64_bf16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim96_bf16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim128_bf16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim192_bf16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim256_bf16*_sm90.cu")
+        # Add these for hdim diff cases
+        file(GLOB FA3_BF16_GEN_SRCS_
+            "hopper/instantiations/flash_fwd_hdim64_256_bf16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim64_512_bf16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim192_128_bf16*_sm90.cu")
+        list(APPEND FA3_BF16_GEN_SRCS ${FA3_BF16_GEN_SRCS_})
+        
+        # FP16 source files
+        file(GLOB FA3_FP16_GEN_SRCS
+            "hopper/instantiations/flash_fwd_hdim64_fp16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim96_fp16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim128_fp16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim192_fp16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim256_fp16*_sm90.cu")
+        # Add these for hdim diff cases
+        file(GLOB FA3_FP16_GEN_SRCS_
+            "hopper/instantiations/flash_fwd_hdim64_256_fp16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim64_512_fp16*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim192_128_fp16*_sm90.cu")
+        list(APPEND FA3_FP16_GEN_SRCS ${FA3_FP16_GEN_SRCS_})
 
-    # FP8 source files
-    file(GLOB FA3_FP8_GEN_SRCS
-        "hopper/instantiations/flash_fwd_hdim64_e4m3*_sm90.cu"
-        "hopper/instantiations/flash_fwd_hdim96_e4m3*_sm90.cu"
-        "hopper/instantiations/flash_fwd_hdim128_e4m3*_sm90.cu"
-        "hopper/instantiations/flash_fwd_hdim192_e4m3*_sm90.cu"
-        "hopper/instantiations/flash_fwd_hdim256_e4m3*_sm90.cu")
-    # Add these for hdim diff cases (192 only)
-    file(GLOB FA3_FP8_GEN_SRCS_
-        "hopper/instantiations/flash_fwd_hdim192_128_e4m3*_sm90.cu")
-    list(APPEND FA3_FP8_GEN_SRCS ${FA3_FP8_GEN_SRCS_})
+        # FP8 source files
+        file(GLOB FA3_FP8_GEN_SRCS
+            "hopper/instantiations/flash_fwd_hdim64_e4m3*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim96_e4m3*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim128_e4m3*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim192_e4m3*_sm90.cu"
+            "hopper/instantiations/flash_fwd_hdim256_e4m3*_sm90.cu")
+        # Add these for hdim diff cases (192 only)
+        file(GLOB FA3_FP8_GEN_SRCS_
+            "hopper/instantiations/flash_fwd_hdim192_128_e4m3*_sm90.cu")
+        list(APPEND FA3_FP8_GEN_SRCS ${FA3_FP8_GEN_SRCS_})
 
-    set(FA3_GEN_SRCS ${FA3_BF16_GEN_SRCS} ${FA3_FP16_GEN_SRCS})
+        set(FA3_GEN_SRCS ${FA3_BF16_GEN_SRCS} ${FA3_FP16_GEN_SRCS} ${FA3_FP8_GEN_SRCS})
+    else()
+        # BF16 source files
+        file(GLOB FA3_BF16_GEN_SRCS
+            "hopper/instantiations/flash_fwd_hdim64_bf16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim96_bf16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim128_bf16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim192_bf16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim256_bf16*_sm80.cu")
+        # Add these for hdim diff cases
+        file(GLOB FA3_BF16_GEN_SRCS_
+            "hopper/instantiations/flash_fwd_hdim64_256_bf16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim64_512_bf16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim192_128_bf16*_sm80.cu")
+        list(APPEND FA3_BF16_GEN_SRCS ${FA3_BF16_GEN_SRCS_})
+        
+        # FP16 source files
+        file(GLOB FA3_FP16_GEN_SRCS
+            "hopper/instantiations/flash_fwd_hdim64_fp16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim96_fp16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim128_fp16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim192_fp16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim256_fp16*_sm80.cu")
+        # Add these for hdim diff cases
+        file(GLOB FA3_FP16_GEN_SRCS_
+            "hopper/instantiations/flash_fwd_hdim64_256_fp16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim64_512_fp16*_sm80.cu"
+            "hopper/instantiations/flash_fwd_hdim192_128_fp16*_sm80.cu")
+        list(APPEND FA3_FP16_GEN_SRCS ${FA3_FP16_GEN_SRCS_})
+
+        set(FA3_GEN_SRCS ${FA3_BF16_GEN_SRCS} ${FA3_FP16_GEN_SRCS})
+    endif()
+
 
     # For CUDA we set the architectures on a per file basis
     # FaV3 is not yet supported in Blackwell
     if (VLLM_GPU_LANG STREQUAL "CUDA")
-        cuda_archs_loose_intersection(FA3_ARCHS "8.0+PTX;" "${CUDA_ARCHS}")
+        if (DETECTED_SM_NUM GREATER_EQUAL 90 AND DETECTED_SM_NUM LESS 100)
+            cuda_archs_loose_intersection(FA3_ARCHS "9.0a;" "${CUDA_ARCHS}")
+        else()
+            cuda_archs_loose_intersection(FA3_ARCHS "8.0+PTX;" "${CUDA_ARCHS}")
+        endif()
         message(STATUS "FA3_ARCHS: ${FA3_ARCHS}")
 
         set_gencode_flags_for_srcs(
@@ -280,8 +319,19 @@ if (FA3_ENABLED AND ${CMAKE_CUDA_COMPILER_VERSION} GREATER_EQUAL 12.0)
         csrc/cutlass/include)
 
     # custom definitions
+    if (DETECTED_SM_NUM GREATER_EQUAL 90 AND DETECTED_SM_NUM LESS 100)
+        target_compile_definitions(_vllm_fa3_C PRIVATE
+            FLASHATTENTION_DISABLE_SOFTCAP
+            FLASHATTENTION_DISABLE_SM8x
+            CUTE_SM90_EXTENDED_MMA_SHAPES_ENABLED
+            CUTLASS_ENABLE_GDC_FOR_SM90
+        )
+    else()
+        target_compile_definitions(_vllm_fa3_C PRIVATE
+            FLASHATTENTION_DISABLE_FP8
+        )
+    endif()
     target_compile_definitions(_vllm_fa3_C PRIVATE
-        FLASHATTENTION_DISABLE_FP8
         FLASHATTENTION_DISABLE_BACKWARD
         FLASHATTENTION_DISABLE_DROPOUT
         # FLASHATTENTION_DISABLE_ALIBI
@@ -298,7 +348,7 @@ if (FA3_ENABLED AND ${CMAKE_CUDA_COMPILER_VERSION} GREATER_EQUAL 12.0)
         # CUTE_SM90_EXTENDED_MMA_SHAPES_ENABLED
         # CUTLASS_ENABLE_GDC_FOR_SM90
     )
-    if (DETECTED_SM STREQUAL "120")
+    if (DETECTED_SM_NUM EQUAL 120)
         target_compile_definitions(_vllm_fa3_C PRIVATE
             FLASHATTENTION_SM120
         )
