@@ -10,29 +10,54 @@ set(FA3_ENABLED ON)
 # CUDA by default, can be overridden by using -DVLLM_TARGET_DEVICE=... (used by setup.py)
 set(VLLM_TARGET_DEVICE "cuda" CACHE STRING "Target device backend for vLLM")
 
-set(_sm_src "
+set(FA_TARGET_SM_FROM_ENV $ENV{FA_TARGET_SM})
+set(FA_TARGET_SM "" CACHE STRING "Target GPU SM (e.g., 80, 86, 89, 90). If set, skip auto-detect.")
+
+set(FA_TARGET_SM_EFFECTIVE "")
+if(FA_TARGET_SM)
+    set(FA_TARGET_SM_EFFECTIVE "${FA_TARGET_SM}")
+elseif(FA_TARGET_SM_FROM_ENV)
+    set(FA_TARGET_SM_EFFECTIVE "${FA_TARGET_SM_FROM_ENV}")
+endif()
+
+if(FA_TARGET_SM_EFFECTIVE)
+    string(REGEX MATCH "[0-9]+" DETECTED_SM_NUM "${FA_TARGET_SM_EFFECTIVE}")
+
+    if(NOT DETECTED_SM_NUM)
+        message(FATAL_ERROR "FA_TARGET_SM must contain a number like 80/86/89/90. Got: ${FA_TARGET_SM_EFFECTIVE}")
+    endif()
+
+    message(STATUS "Using specified SM (skip auto-detect): ${DETECTED_SM_NUM}")
+else()
+    set(_sm_src "
 #include <cstdio>
 #include <cuda_runtime.h>
 
 int main() {
-  int dev = 0;
-  cudaDeviceProp p;
-  if (cudaGetDevice(&dev) != cudaSuccess) return 2;
-  if (cudaGetDeviceProperties(&p, dev) != cudaSuccess) return 3;
-  // print as integer like 120, 90, 89, 86 ...
-  std::printf(\"%d\", p.major * 10 + p.minor);
-  return 0;
+    int dev = 0;
+    cudaDeviceProp p;
+    if (cudaGetDevice(&dev) != cudaSuccess) return 2;
+    if (cudaGetDeviceProperties(&p, dev) != cudaSuccess) return 3;
+    // print as integer like 120, 90, 89, 86 ...
+    std::printf(\"%d\", p.major * 10 + p.minor);
+    return 0;
 }
-")
+    ")
 
-file(WRITE ${CMAKE_BINARY_DIR}/detect_sm.cu "${_sm_src}")
+    file(WRITE ${CMAKE_BINARY_DIR}/detect_sm.cu "${_sm_src}")
 
-try_run(RUN_RES COMPILE_RES
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_BINARY_DIR}/detect_sm.cu
-    RUN_OUTPUT_VARIABLE DETECTED_SM
-)
-string(REGEX MATCH "[0-9]+" DETECTED_SM_NUM "${DETECTED_SM}")
+    try_run(RUN_RES COMPILE_RES
+        ${CMAKE_BINARY_DIR}
+        ${CMAKE_BINARY_DIR}/detect_sm.cu
+        RUN_OUTPUT_VARIABLE DETECTED_SM
+    )
+    string(REGEX MATCH "[0-9]+" DETECTED_SM_NUM "${DETECTED_SM}")
+    if (NOT DETECTED_SM_NUM)
+        message(FATAL_ERROR "Failed to parse detected SM from: '${DETECTED_SM}'")
+    endif()
+endif()
+
+math(EXPR DETECTED_SM_NUM "${DETECTED_SM_NUM}")
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Target device: ${VLLM_TARGET_DEVICE}")
