@@ -161,8 +161,14 @@
     if (ARCH == 86 || ARCH == 89) {                                                              \
       constexpr static int ARCH_NAME = 86;                                                       \
       return __VA_ARGS__();                                                                      \
-    } else if (ARCH < 90 || ARCH >= 100) {                                                                      \
+    } else if (ARCH < 90) {                                                                      \
       constexpr static int ARCH_NAME = 80;                                                       \
+      return __VA_ARGS__();                                                                      \
+    } else if (ARCH < 100) {                                                                     \
+      constexpr static int ARCH_NAME = 90;                                                       \
+      return __VA_ARGS__();                                                                      \
+    } else if (ARCH == 120) {                                                                    \
+      constexpr static int ARCH_NAME = 120;                                                      \
       return __VA_ARGS__();                                                                      \
     }                                                                                            \
   }()

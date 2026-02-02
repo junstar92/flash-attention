@@ -77,12 +77,7 @@ constexpr std::tuple<int, int, bool, bool> tile_size_fwd_sm90(
 constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x(
         bool sm86_or_89, int headdim, int headdim_v, bool is_causal, bool is_local, int element_size=2,
         bool paged_kv=false, bool varlen_and_split=false,
-        bool softcap=false, bool append_kv=false) {
-#if defined(FLASHATTENTION_SM120)
-    constexpr bool is_sm120 = true;
-#else
-    constexpr bool is_sm120 = false;
-#endif
+        bool softcap=false, bool append_kv=false, bool is_sm120=false) {
     if (element_size == 2) {
         if (headdim <= 64) {
             return {128, varlen_and_split ? 80 : (is_local ? 96 : 112), 4, 1, false};
@@ -107,12 +102,7 @@ constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x(
 constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x_decode(
         bool sm86_or_89, int headdim, int headdim_v, bool is_causal, bool is_local, int element_size=2,
         bool paged_kv=false, bool varlen_and_split=false,
-        bool softcap=false, bool append_kv=false) {
-#if defined(FLASHATTENTION_SM120)
-    constexpr bool is_sm120 = true;
-#else
-    constexpr bool is_sm120 = false;
-#endif
+        bool softcap=false, bool append_kv=false, bool is_sm120=false) {
     if (element_size == 2) {
         if (headdim <= 64) {
             return {64, varlen_and_split ? 80 : (is_local ? 96 : 112), 2, 3, false};

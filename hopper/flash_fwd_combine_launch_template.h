@@ -19,7 +19,7 @@ using namespace cute;
 
 template <int Arch, int kBlockM, int kBlockK, int kLogMaxSplits, bool IsEvenK, bool Varlen, typename Element, typename ElementPartial>
 void run_flash_fwd_combine(Flash_fwd_params &params, cudaStream_t stream, bool enable_pdl) {
-    using ArchTag = std::conditional_t<Arch >= 90, cutlass::arch::Sm90, cutlass::arch::Sm80>;
+    using ArchTag = std::conditional_t<(Arch >= 90 && Arch != 120), cutlass::arch::Sm90, cutlass::arch::Sm80>;
     using TileShape_MK = cute::Shape<Int<kBlockM>, Int<kBlockK>>;
     using CombineKernel = flash::FlashAttnFwdCombine<TileShape_MK, kLogMaxSplits, 256 /*kNThreads*/, 1 /*AlignmentLSE*/,
                                                      IsEvenK, Varlen, Element, ElementPartial, ArchTag>;
@@ -56,7 +56,7 @@ void run_flash_fwd_combine(Flash_fwd_params &params, cudaStream_t stream, bool e
         CHECK_CUDA(cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_size));
     }
     // kernel<<<grid_m, CombineKernel::MaxThreadsPerBlock, smem_size, stream>>>(kernel_params);
-    cutlass::kernel_launch<CombineKernel>(grid_m, CombineKernel::MaxThreadsPerBlock, smem_size, stream, kernel_params, Arch >= 90 && enable_pdl /*launch_with_pdl*/);
+    cutlass::kernel_launch<CombineKernel>(grid_m, CombineKernel::MaxThreadsPerBlock, smem_size, stream, kernel_params, (Arch >= 90 && Arch != 120) && enable_pdl /*launch_with_pdl*/);
     CHECK_CUDA_KERNEL_LAUNCH();
 }
 
